@@ -716,7 +716,7 @@ export const updateServiceOrder = async (
             });
             const responseData = await response.json();
             if (!response.ok) {
-              emailErrorMessage = \`Falha ao enviar e-mail: \${
+              emailErrorMessage = `Falha ao enviar e-mail: \${
                 responseData.message || response.statusText
               }\`;
             } else {
