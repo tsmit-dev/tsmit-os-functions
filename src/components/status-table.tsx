@@ -102,6 +102,7 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                     <TableHead>Status Final?</TableHead>
                     <TableHead>Status Inicial?</TableHead>
                     <TableHead>Dispara Email?</TableHead>
+                    <TableHead>Dispara WhatsApp?</TableHead>
                     <TableHead className="w-[120px] text-right">Ações</TableHead>
                 </TableRow>
                 </TableHeader>
@@ -127,6 +128,7 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                         <TableCell>{status.isFinal ? "Sim" : "Não"}</TableCell>
                         <TableCell>{status.isInitial ? "Sim" : "Não"}</TableCell>
                         <TableCell>{status.triggersEmail ? "Sim" : "Não"}</TableCell>
+                        <TableCell>{status.triggersWhatsapp ? "Sim" : "Não"}</TableCell>
                         <TableCell className="text-right space-x-2">
                             <Button variant="ghost" size="icon" onClick={() => openEdit(status)}>
                                 <Pencil className="h-4 w-4" />
@@ -188,6 +190,10 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                         <div className="flex items-center">
                            <span className={`mr-2 h-2 w-2 rounded-full ${status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'}`}></span>
                            <span>Dispara Email</span>
+                        </div>
+                        <div className="flex items-center">
+                           <span className={`mr-2 h-2 w-2 rounded-full ${status.triggersWhatsapp ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                           <span>Dispara WhatsApp</span>
                         </div>
                     </CardContent>
                     <CardFooter className="flex justify-end space-x-2">

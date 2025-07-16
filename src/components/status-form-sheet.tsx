@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Status } from '@/lib/types';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Pencil, Plus } from 'lucide-react';
 import { IconPicker } from './icon-picker';
@@ -18,6 +17,7 @@ import { TwitterPicker } from 'react-color';
 import { Textarea } from './ui/textarea';
 import { addStatus, updateStatus } from '@/lib/data';
 import { Switch } from './ui/switch';
+import { Checkbox } from './ui/checkbox';
 
 const statusSchema = z.object({
     name: z.string().min(1, 'O nome é obrigatório.'),
@@ -33,26 +33,34 @@ const statusSchema = z.object({
     whatsappBody: z.string().optional(),
 });
 
+type StatusFormValues = z.infer<typeof statusSchema>;
+
 interface StatusFormSheetProps {
-  children: React.ReactNode;
-  status?: Status;
+  status?: Status | null;
   onStatusChange: () => void;
   allStatuses: Status[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function StatusFormSheet({ children, status, onStatusChange, allStatuses }: StatusFormSheetProps) {
+export function StatusFormSheet({ open, onOpenChange, status, onStatusChange, allStatuses }: StatusFormSheetProps) {
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
 
-  const form = useForm<z.infer<typeof statusSchema>>({
+  const form = useForm<StatusFormValues>({
     resolver: zodResolver(statusSchema),
-    defaultValues: status ? {
+  });
+  
+  const { watch, reset, control, handleSubmit } = form;
+
+  useEffect(() => {
+    if (open) {
+      const defaultValues = status ? {
         ...status,
         order: status.order ?? 0,
         emailBody: status.emailBody || '',
         triggersWhatsapp: status.triggersWhatsapp || false,
         whatsappBody: status.whatsappBody || '',
-    } : {
+      } : {
         name: '',
         order: (allStatuses.length > 0 ? Math.max(...allStatuses.map(s => s.order)) + 1 : 1),
         color: '#4A90E2',
@@ -64,13 +72,16 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
         emailBody: '',
         triggersWhatsapp: false,
         whatsappBody: '',
-    },
-  });
+      };
+      reset(defaultValues);
+    }
+  }, [open, status, allStatuses, reset]);
 
-  const triggersEmail = form.watch('triggersEmail');
-  const triggersWhatsapp = form.watch('triggersWhatsapp');
 
-  const onSubmit = async (values: z.infer<typeof statusSchema>) => {
+  const triggersEmail = watch('triggersEmail');
+  const triggersWhatsapp = watch('triggersWhatsapp');
+
+  const onSubmit = async (values: StatusFormValues) => {
     try {
       if (status) {
         await updateStatus(status.id, values);
@@ -80,8 +91,7 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
         toast({ title: 'Sucesso', description: 'Status adicionado com sucesso.' });
       }
       onStatusChange();
-      setIsOpen(false);
-      form.reset();
+      onOpenChange(false);
     } catch (error) {
       console.error('Failed to save status', error);
       toast({ title: 'Erro', description: 'Não foi possível salvar o status.', variant: 'destructive' });
@@ -89,30 +99,21 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <div onClick={() => setIsOpen(true)}>{children}</div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>{status ? 'Editar Status' : 'Adicionar Status'}</SheetTitle>
         </SheetHeader>
         <div className="mt-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <FormField control={control} name="name" render={({ field }) => (
+                <FormItem><FormLabel>Nome</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <FormField control={form.control} name="order" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ordem</FormLabel>
-                  <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl>
-                  <FormMessage />
-                </FormItem>
+              <FormField control={control} name="order" render={({ field }) => (
+                <FormItem><FormLabel>Ordem</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)}/></FormControl><FormMessage /></FormItem>
               )} />
-               <FormField control={form.control} name="color" render={({ field }) => (
+               <FormField control={control} name="color" render={({ field }) => (
                   <FormItem>
                      <FormLabel>Cor</FormLabel>
                      <Popover>
@@ -122,84 +123,57 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
                            {field.value}
                            </Button>
                         </PopoverTrigger>
-                        <PopoverContent>
-                           <TwitterPicker color={field.value} onChangeComplete={(color) => field.onChange(color.hex)} />
-                        </PopoverContent>
+                        <PopoverContent><TwitterPicker color={field.value} onChangeComplete={(color) => field.onChange(color.hex)} /></PopoverContent>
                      </Popover>
                   </FormItem>
                )} />
-               <FormField control={form.control} name="icon" render={({ field }) => (
+               <FormField control={control} name="icon" render={({ field }) => (
                   <FormItem>
                      <FormLabel>Ícone</FormLabel>
                      <Controller
-                        control={form.control}
+                        control={control}
                         name="icon"
-                        render={({ field: { onChange, value } }) => (
-                           <IconPicker value={value} onChange={onChange} />
-                        )}
-                        />
+                        render={({ field: { onChange, value } }) => (<IconPicker value={value} onChange={onChange} />)}
+                      />
                   </FormItem>
                )} />
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="isInitial" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <FormLabel>Status Inicial?</FormLabel>
-                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        </FormItem>
+                    <FormField control={control} name="isInitial" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><FormLabel>Status Inicial?</FormLabel><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
-                    <FormField control={form.control} name="isFinal" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <FormLabel>Status Final?</FormLabel>
-                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        </FormItem>
+                    <FormField control={control} name="isFinal" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><FormLabel>Status Final?</FormLabel><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
-                    <FormField control={form.control} name="isPickupStatus" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <FormLabel>Pronto p/ Retirada?</FormLabel>
-                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        </FormItem>
+                    <FormField control={control} name="isPickupStatus" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><FormLabel>Pronto p/ Retirada?</FormLabel><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
                 </div>
 
                 <div className="space-y-4 rounded-lg border p-4">
-                    <FormField control={form.control} name="triggersEmail" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between">
-                            <FormLabel>Disparar Notificação por E-mail?</FormLabel>
-                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        </FormItem>
+                    <FormField control={control} name="triggersEmail" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Disparar Notificação por E-mail?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
                     {triggersEmail && (
-                        <FormField control={form.control} name="emailBody" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Corpo do Email</FormLabel>
-                            <FormControl><Textarea {...field} rows={5} placeholder="Ex: Olá {client_name}, a sua Ordem de Serviço nº {os_number} mudou para o status: {status_name}." /></FormControl>
-                            <FormMessage />
-                            </FormItem>
+                        <FormField control={control} name="emailBody" render={({ field }) => (
+                            <FormItem><FormLabel>Corpo do Email</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="Ex: Olá {client_name}, a sua OS nº {os_number} mudou para: {status_name}." /></FormControl><FormMessage /></FormItem>
                         )} />
                     )}
                 </div>
 
                 <div className="space-y-4 rounded-lg border p-4">
-                    <FormField control={form.control} name="triggersWhatsapp" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between">
-                            <FormLabel>Disparar Notificação por WhatsApp?</FormLabel>
-                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        </FormItem>
+                    <FormField control={control} name="triggersWhatsapp" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Disparar Notificação por WhatsApp?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
                     {triggersWhatsapp && (
-                        <FormField control={form.control} name="whatsappBody" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Corpo da Mensagem do WhatsApp</FormLabel>
-                            <FormControl><Textarea {...field} rows={5} placeholder="Ex: Olá {client_name}, a OS {os_number} foi atualizada para: {status_name}." /></FormControl>
-                            <FormMessage />
-                            </FormItem>
+                        <FormField control={control} name="whatsappBody" render={({ field }) => (
+                            <FormItem><FormLabel>Corpo da Mensagem do WhatsApp</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="Ex: Olá {client_name}, a OS {os_number} foi atualizada para: {status_name}." /></FormControl><FormMessage /></FormItem>
                         )} />
                     )}
                 </div>
 
 
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit">Salvar</Button>
               </div>
             </form>
@@ -210,34 +184,38 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
   );
 }
 
-interface EditStatusSheetProps {
+interface EditStatusButtonProps {
     status: Status;
     onStatusChange: () => void;
     allStatuses: Status[];
 }
 
-export function EditStatusSheet({ status, onStatusChange, allStatuses }: EditStatusSheetProps) {
+export function EditStatusButton({ status, onStatusChange, allStatuses }: EditStatusButtonProps) {
+    const [open, setOpen] = useState(false);
     return (
-        <StatusFormSheet status={status} onStatusChange={onStatusChange} allStatuses={allStatuses}>
-            <Button variant="ghost" size="icon">
+        <>
+            <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
                 <Pencil className="h-4 w-4" />
             </Button>
-        </StatusFormSheet>
+            <StatusFormSheet open={open} onOpenChange={setOpen} status={status} onStatusChange={onStatusChange} allStatuses={allStatuses} />
+        </>
     )
 }
 
-interface AddStatusSheetProps {
+interface AddStatusButtonProps {
     onStatusChange: () => void;
     allStatuses: Status[];
 }
 
-export function AddStatusSheet({ onStatusChange, allStatuses }: AddStatusSheetProps) {
+export function AddStatusButton({ onStatusChange, allStatuses }: AddStatusButtonProps) {
+    const [open, setOpen] = useState(false);
     return (
-        <StatusFormSheet onStatusChange={onStatusChange} allStatuses={allStatuses}>
-            <Button>
+        <>
+            <Button onClick={() => setOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Adicionar Status
             </Button>
-        </StatusFormSheet>
+            <StatusFormSheet open={open} onOpenChange={setOpen} onStatusChange={onStatusChange} allStatuses={allStatuses} />
+        </>
     )
 }
