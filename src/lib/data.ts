@@ -716,14 +716,14 @@ export const updateServiceOrder = async (
             });
             const responseData = await response.json();
             if (!response.ok) {
-              emailErrorMessage = `Falha ao enviar e-mail: \${
+              emailErrorMessage = `Falha ao enviar e-mail: ${
                 responseData.message || response.statusText
-              }\`;
+              }`;
             } else {
               emailSent = true;
             }
           } catch (e: any) {
-            emailErrorMessage = \`Erro de rede ao tentar enviar e-mail: \${e.message}\`;
+            emailErrorMessage = `Erro de rede ao tentar enviar e-mail: ${e.message}`;
           }
         } else {
           emailErrorMessage = "Nenhum e-mail de destinatário válido.";
@@ -737,7 +737,7 @@ export const updateServiceOrder = async (
     return {
       updatedOrder: null,
       emailSent: false,
-      emailErrorMessage: \`Erro ao atualizar OS: \${e.message}\`,
+      emailErrorMessage: `Erro ao atualizar OS: ${e.message}`,
     };
   }
 };
