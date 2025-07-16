@@ -18,7 +18,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ScrollArea } from './ui/scroll-area';
 
 // Define o tipo para os componentes de ícone da Lucide
 type LucideIcon = React.ForwardRefExoticComponent<Omit<Icons.LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
@@ -95,37 +94,35 @@ export function IconPicker({ value, onChange, className }: IconPickerProps) {
           <CommandInput placeholder="Buscar ícone..." />
           <CommandEmpty>Nenhum ícone encontrado.</CommandEmpty>
           <CommandList>
-            <ScrollArea className="h-64">
-              <CommandGroup>
-                {iconList.map((iconName) => {
-                  const Icon = iconComponents[iconName];
-                  return (
-                    <CommandItem
-                      key={iconName}
-                      value={iconName}
-                      onSelect={(currentValue: string) => {
-                        const selectedIconName = iconList.find(name => name.toLowerCase() === currentValue.toLowerCase());
-                         if(selectedIconName) {
-                            onChange(selectedIconName);
-                        }
-                        setOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          value === iconName ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
-                      <div className="flex items-center gap-2">
-                         {Icon ? <Icon className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
-                         {iconName}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </ScrollArea>
+            <CommandGroup>
+              {iconList.map((iconName) => {
+                const Icon = iconComponents[iconName];
+                return (
+                  <CommandItem
+                    key={iconName}
+                    value={iconName}
+                    onSelect={(currentValue: string) => {
+                      const selectedIconName = iconList.find(name => name.toLowerCase() === currentValue.toLowerCase());
+                        if(selectedIconName) {
+                          onChange(selectedIconName);
+                      }
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === iconName ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <div className="flex items-center gap-2">
+                        {Icon ? <Icon className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
+                        {iconName}
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
