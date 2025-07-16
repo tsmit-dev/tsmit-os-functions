@@ -11,6 +11,7 @@ import {
   EditLogEntry,
   EditLogChange,
   Status,
+  WhatsappSettings,
 } from "./types";
 import { db } from "./firebase";
 import {
@@ -617,6 +618,65 @@ export const deleteServiceOrder = async (id: string): Promise<boolean> => {
   }
 };
 
+const sendWhatsappMessage = async (
+  order: ServiceOrder,
+  client: Client | null,
+  whatsappBody: string
+): Promise<{ success: boolean; errorMessage?: string }> => {
+  try {
+    const settingsDocRef = doc(db, 'settings', 'integrations');
+    const settingsDocSnap = await getDoc(settingsDocRef);
+    const settings = settingsDocSnap.data() as { whatsapp?: WhatsappSettings };
+
+    const { endpoint, bearerToken } = settings?.whatsapp || {};
+
+    if (!endpoint || !bearerToken) {
+      return { success: false, errorMessage: 'API do WhatsApp não configurada.' };
+    }
+
+    const recipientPhone = order.collaborator.phone;
+    if (!recipientPhone) {
+      return { success: false, errorMessage: 'Número de telefone não encontrado para este colaborador.' };
+    }
+
+    // Sanitize phone number: remove non-digits
+    const sanitizedNumber = recipientPhone.replace(/\D/g, '');
+
+    const body = whatsappBody
+      .replace(/{client_name}/g, client?.name || 'N/A')
+      .replace(/{os_number}/g, order.orderNumber)
+      .replace(/{status_name}/g, order.status.name)
+      .replace(/{collaborator_name}/g, order.collaborator.name || 'N/A');
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${bearerToken}`,
+      },
+      body: JSON.stringify({
+        number: sanitizedNumber,
+        body: body,
+        userId: "",
+        queueId: "",
+        sendSignature: false,
+        closeTicket: false,
+      }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error("WhatsApp API Error:", errorData);
+        return { success: false, errorMessage: `Falha na API do WhatsApp: ${errorData.message || response.statusText}` };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Erro ao enviar mensagem do WhatsApp:", error);
+    return { success: false, errorMessage: `Erro inesperado: ${error.message}` };
+  }
+};
+
 export const updateServiceOrder = async (
   id: string,
   newStatusId: string,
@@ -631,52 +691,33 @@ export const updateServiceOrder = async (
   try {
     const currentOrderSnap = await getDoc(serviceOrderDocRef);
     if (!currentOrderSnap.exists()) {
-      return {
-        updatedOrder: null,
-        emailSent: false,
-        emailErrorMessage: "Ordem de serviço não encontrada.",
-      };
+      return { updatedOrder: null, emailSent: false, whatsappSent: false };
     }
 
     const currentOrderData = currentOrderSnap.data();
     const oldStatusId = currentOrderData.statusId;
 
     const newLogEntry: Omit<LogEntry, "id"> = {
-      timestamp: new Date(),
-      responsible,
-      fromStatus: oldStatusId,
-      toStatus: newStatusId,
+      timestamp: new Date(), responsible, fromStatus: oldStatusId, toStatus: newStatusId,
     };
-
-    if (observation) {
-      newLogEntry.observation = observation;
-    }
+    if (observation) newLogEntry.observation = observation;
 
     const updatePayload: any = {};
     let hasChanges = false;
 
-    if (newStatusId !== oldStatusId) {
+    if (newStatusId !== oldStatusId || observation) {
       updatePayload.statusId = newStatusId;
       updatePayload.logs = arrayUnion(newLogEntry);
       hasChanges = true;
-    } else if (observation) {
-      updatePayload.logs = arrayUnion(newLogEntry);
-      hasChanges = true;
     }
-
-    if (
-      technicalSolution !== undefined &&
-      technicalSolution !== currentOrderData.technicalSolution
-    ) {
+    if (technicalSolution !== undefined && technicalSolution !== currentOrderData.technicalSolution) {
       updatePayload.technicalSolution = technicalSolution;
       hasChanges = true;
     }
-
     if (attachments !== undefined) {
       updatePayload.attachments = attachments;
       hasChanges = true;
     }
-
     if (confirmedServiceIds !== undefined) {
       updatePayload.confirmedServiceIds = confirmedServiceIds;
       hasChanges = true;
@@ -687,53 +728,50 @@ export const updateServiceOrder = async (
     }
 
     const updatedOrder = await getServiceOrderById(id);
-
     let emailSent = false;
     let emailErrorMessage: string | undefined;
+    let whatsappSent = false;
+    let whatsappErrorMessage: string | undefined;
 
-    if (updatedOrder) {
+    if (updatedOrder && newStatusId !== oldStatusId) {
       const newStatusObj = await getStatusById(newStatusId);
-      const triggersEmail = newStatusObj?.triggersEmail;
+      const client = await getClientById(updatedOrder.clientId);
 
-      if (triggersEmail && newStatusId !== oldStatusId) {
-        const client = await getClientById(updatedOrder.clientId);
+      // --- Email Logic ---
+      if (newStatusObj?.triggersEmail) {
         const recipientEmail = client?.email || updatedOrder.collaborator.email;
-
         if (recipientEmail) {
           try {
             const response = await fetch("/api/send-email", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                serviceOrder: updatedOrder,
-                client,
-                emailBody: newStatusObj?.emailBody,
-              }),
+              body: JSON.stringify({ serviceOrder: updatedOrder, client, emailBody: newStatusObj.emailBody }),
             });
-            const responseData = await response.json();
-            if (!response.ok) {
-              emailErrorMessage = `Falha ao enviar e-mail: ${
-                responseData.message || response.statusText
-              }`;
-            } else {
+            if (response.ok) {
               emailSent = true;
+            } else {
+              const resData = await response.json();
+              emailErrorMessage = `Falha: ${resData.message || response.statusText}`;
             }
           } catch (e: any) {
-            emailErrorMessage = `Erro de rede ao tentar enviar e-mail: ${e.message}`;
+            emailErrorMessage = `Erro de rede: ${e.message}`;
           }
         } else {
-          emailErrorMessage = "Nenhum e-mail de destinatário válido.";
+          emailErrorMessage = "E-mail do destinatário não encontrado.";
         }
+      }
+
+      // --- WhatsApp Logic ---
+      if (newStatusObj?.triggersWhatsapp && newStatusObj.whatsappBody) {
+        const result = await sendWhatsappMessage(updatedOrder, client, newStatusObj.whatsappBody);
+        whatsappSent = result.success;
+        whatsappErrorMessage = result.errorMessage;
       }
     }
 
-    return { updatedOrder, emailSent, emailErrorMessage };
+    return { updatedOrder, emailSent, emailErrorMessage, whatsappSent, whatsappErrorMessage };
   } catch (e: any) {
     console.error("Error updating service order:", e);
-    return {
-      updatedOrder: null,
-      emailSent: false,
-      emailErrorMessage: `Erro ao atualizar OS: ${e.message}`,
-    };
+    return { updatedOrder: null, emailSent: false, whatsappSent: false, emailErrorMessage: `Erro: ${e.message}`, whatsappErrorMessage: `Erro: ${e.message}` };
   }
 };

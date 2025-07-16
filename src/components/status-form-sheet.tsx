@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Status } from '@/lib/types';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { TwitterPicker } from 'react-color';
 import { Textarea } from './ui/textarea';
 import { addStatus, updateStatus } from '@/lib/data';
+import { Switch } from './ui/switch';
 
 const statusSchema = z.object({
     name: z.string().min(1, 'O nome é obrigatório.'),
@@ -28,6 +29,8 @@ const statusSchema = z.object({
     isPickupStatus: z.boolean().default(false),
     triggersEmail: z.boolean().default(false),
     emailBody: z.string().optional(),
+    triggersWhatsapp: z.boolean().default(false),
+    whatsappBody: z.string().optional(),
 });
 
 interface StatusFormSheetProps {
@@ -47,6 +50,8 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
         ...status,
         order: status.order ?? 0,
         emailBody: status.emailBody || '',
+        triggersWhatsapp: status.triggersWhatsapp || false,
+        whatsappBody: status.whatsappBody || '',
     } : {
         name: '',
         order: (allStatuses.length > 0 ? Math.max(...allStatuses.map(s => s.order)) + 1 : 1),
@@ -57,10 +62,13 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
         isPickupStatus: false,
         triggersEmail: false,
         emailBody: '',
+        triggersWhatsapp: false,
+        whatsappBody: '',
     },
   });
 
   const triggersEmail = form.watch('triggersEmail');
+  const triggersWhatsapp = form.watch('triggersWhatsapp');
 
   const onSubmit = async (values: z.infer<typeof statusSchema>) => {
     try {
@@ -82,7 +90,7 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>{children}</SheetTrigger>
+        <div onClick={() => setIsOpen(true)}>{children}</div>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>{status ? 'Editar Status' : 'Adicionar Status'}</SheetTitle>
@@ -151,22 +159,45 @@ export function StatusFormSheet({ children, status, onStatusChange, allStatuses 
                             <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>
                     )} />
+                </div>
+
+                <div className="space-y-4 rounded-lg border p-4">
                     <FormField control={form.control} name="triggersEmail" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <FormLabel>Dispara Email?</FormLabel>
-                            <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        <FormItem className="flex flex-row items-center justify-between">
+                            <FormLabel>Disparar Notificação por E-mail?</FormLabel>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>
                     )} />
+                    {triggersEmail && (
+                        <FormField control={form.control} name="emailBody" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Corpo do Email</FormLabel>
+                            <FormControl><Textarea {...field} rows={5} placeholder="Ex: Olá {client_name}, a sua Ordem de Serviço nº {os_number} mudou para o status: {status_name}." /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
                 </div>
-                {triggersEmail && (
-                  <FormField control={form.control} name="emailBody" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Corpo do Email</FormLabel>
-                      <FormControl><Textarea {...field} rows={5} placeholder="Ex: Olá {client_name}, a sua Ordem de Serviço nº {os_number} mudou para o status: {status_name}." /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                )}
+
+                <div className="space-y-4 rounded-lg border p-4">
+                    <FormField control={form.control} name="triggersWhatsapp" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                            <FormLabel>Disparar Notificação por WhatsApp?</FormLabel>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )} />
+                    {triggersWhatsapp && (
+                        <FormField control={form.control} name="whatsappBody" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Corpo da Mensagem do WhatsApp</FormLabel>
+                            <FormControl><Textarea {...field} rows={5} placeholder="Ex: Olá {client_name}, a OS {os_number} foi atualizada para: {status_name}." /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                    )}
+                </div>
+
+
               <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancelar</Button>
                 <Button type="submit">Salvar</Button>

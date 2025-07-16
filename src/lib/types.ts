@@ -70,6 +70,8 @@ icon?: string;
 isInitial?: boolean;
 triggersEmail?: boolean;
 emailBody?: string;
+triggersWhatsapp?: boolean;
+whatsappBody?: string;
 allowedNextStatuses?: string[];
 allowedPreviousStatuses?: string[];
 isPickupStatus?: boolean;
@@ -140,8 +142,15 @@ senderEmail?: string;
 smtpPassword?: string;
 }
 
+export interface WhatsappSettings {
+  endpoint?: string;
+  bearerToken?: string;
+}
+
 export type UpdateServiceOrderResult = {
-updatedOrder: ServiceOrder | null;
-emailSent?: boolean;
-emailErrorMessage?: string;
+  updatedOrder: ServiceOrder | null;
+  emailSent?: boolean;
+  emailErrorMessage?: string;
+  whatsappSent?: boolean;
+  whatsappErrorMessage?: string;
 };
