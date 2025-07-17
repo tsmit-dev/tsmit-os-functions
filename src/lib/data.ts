@@ -11,7 +11,6 @@ import {
   EditLogEntry,
   EditLogChange,
   Status,
-  WhatsappSettings,
 } from "./types";
 import { db } from "./firebase";
 import {
@@ -32,10 +31,12 @@ import {
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 
+// Initialize Firebase Functions
 const functions = getFunctions();
 const createUserCallable = httpsCallable(functions, "createUser");
 const updateUserCallable = httpsCallable(functions, "updateUser");
 const deleteUserCallable = httpsCallable(functions, "deleteUser");
+const sendWhatsappMessageCallable = httpsCallable(functions, "sendWhatsappMessage");
 
 
 // --- ROLES ---
@@ -623,57 +624,25 @@ const sendWhatsappMessage = async (
   client: Client | null,
   whatsappBody: string
 ): Promise<{ success: boolean; errorMessage?: string }> => {
+  if (!client || !order.collaborator.phone) {
+    return { success: false, errorMessage: 'Número de telefone ou cliente não encontrado.' };
+  }
+  
+  const personalizedBody = whatsappBody
+      .replace(/{{clientName}}/g, client.name || 'N/A')
+      .replace(/{{osNumber}}/g, order.orderNumber)
+      .replace(/{{statusName}}/g, order.status.name)
+      .replace(/{{collaboratorName}}/g, order.collaborator.name || 'N/A');
+
   try {
-    const settingsDocRef = doc(db, 'settings', 'integrations');
-    const settingsDocSnap = await getDoc(settingsDocRef);
-    const settings = settingsDocSnap.data() as { whatsapp?: WhatsappSettings };
-
-    const { endpoint, bearerToken } = settings?.whatsapp || {};
-
-    if (!endpoint || !bearerToken) {
-      return { success: false, errorMessage: 'API do WhatsApp não configurada.' };
-    }
-
-    const recipientPhone = order.collaborator.phone;
-    if (!recipientPhone) {
-      return { success: false, errorMessage: 'Número de telefone não encontrado para este colaborador.' };
-    }
-
-    // Sanitize phone number: remove non-digits
-    const sanitizedNumber = recipientPhone.replace(/\D/g, '');
-
-    const body = whatsappBody
-      .replace(/{client_name}/g, client?.name || 'N/A')
-      .replace(/{os_number}/g, order.orderNumber)
-      .replace(/{status_name}/g, order.status.name)
-      .replace(/{collaborator_name}/g, order.collaborator.name || 'N/A');
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${bearerToken}`,
-      },
-      body: JSON.stringify({
-        number: sanitizedNumber,
-        body: body,
-        userId: "",
-        queueId: "",
-        sendSignature: false,
-        closeTicket: false,
-      }),
+    await sendWhatsappMessageCallable({
+      number: order.collaborator.phone,
+      body: personalizedBody,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error("WhatsApp API Error:", errorData);
-        return { success: false, errorMessage: `Falha na API do WhatsApp: ${errorData.message || response.statusText}` };
-    }
-
     return { success: true };
   } catch (error: any) {
-    console.error("Erro ao enviar mensagem do WhatsApp:", error);
-    return { success: false, errorMessage: `Erro inesperado: ${error.message}` };
+    console.error("Erro ao chamar a Cloud Function 'sendWhatsappMessage':", error);
+    return { success: false, errorMessage: error.message || "Erro desconhecido ao enviar WhatsApp." };
   }
 };
 
