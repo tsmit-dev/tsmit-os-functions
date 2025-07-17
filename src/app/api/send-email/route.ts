@@ -36,15 +36,15 @@ async function sendEmailWithMailerSend(
 }
 
 function generateDynamicEmailContent(
-    order: ServiceOrder, 
-    clientName: string, 
-    emailSubjectTpl: string | undefined, 
+    order: ServiceOrder,
+    clientName: string,
+    emailSubjectTpl: string | undefined,
     emailBodyTpl: string
 ): { subject: string, htmlContent: string } {
-    
+
     // Fallback subject if no template is provided in the status
     const subjectTemplate = emailSubjectTpl || `Atualização da OS {{osNumber}} - Status: {{statusName}}`;
-    
+
     // Define the replacements based on the variables shown in the frontend
     const replacements: { [key: string]: string } = {
         "{{clientName}}": clientName,
@@ -67,8 +67,8 @@ function generateDynamicEmailContent(
     }
 
     const personalizedSubject = replacePlaceholders(subjectTemplate);
-    const personalizedBody = replacePlaceholders(emailBodyTpl).replace(/
-/g, '<br>');
+    const personalizedBodyWithBreaks = replacePlaceholders(emailBodyTpl)
+  .replace(/\r?\n/g, '<br>');
 
     const commonStyle = "font-family: Arial, sans-serif; line-height: 1.6; color: #333;";
     const headerStyle = "color: #0056b3;";
@@ -78,7 +78,7 @@ function generateDynamicEmailContent(
         <div style="${commonStyle}">
             <h2 style="${headerStyle}">${personalizedSubject}</h2>
             <p>Prezado(a) ${clientName},</p>
-            <div>${personalizedBody}</div>
+            <div>${personalizedBodyWithBreaks}</div>
             <p><strong>Resumo do Equipamento:</strong></p>
             <ul>
                 <li><strong>Número da OS:</strong> ${order.orderNumber}</li>
@@ -90,7 +90,7 @@ function generateDynamicEmailContent(
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;"/>
             <p style="${footerStyle}">Este é um e-mail automático, por favor, não responda.</p>
         </div>`;
-    
+
     return { subject: personalizedSubject, htmlContent };
 }
 
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const svcOrder = body.serviceOrder as ServiceOrder;
     const cli = body.client as Client;
-    
+
     const emailSubjectTpl = svcOrder.status?.emailSubject;
     const emailBodyTpl = svcOrder.status?.emailBody;
 
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
     if (!settingsSnap.exists) {
       return NextResponse.json({ error: 'Configurações de e-mail não encontradas no Firestore.' }, { status: 500 });
     }
-    
+
     const emailSettings = settingsSnap.data() as EmailSettings;
     const senderEmail = emailSettings.senderEmail;
 
