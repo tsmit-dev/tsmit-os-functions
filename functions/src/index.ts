@@ -206,10 +206,18 @@ export const sendWhatsappMessage = onCall(async (request) => {
     }
 
     const settings = settingsDoc.data();
-    const apiUrl = settings?.apiUrl;
-    const token = settings?.token;
+
+    // --- Added for debugging ---
+    logger.info("Configurações do WhatsApp recuperadas:", {settings});
+
+    const apiUrl = settings?.endpoint;
+    const token = settings?.bearerToken;
 
     if (!apiUrl || !token) {
+      logger.error(
+        "A URL da API ou o Token não estão configurados corretamente.",
+        {settings},
+      );
       throw new HttpsError(
         "failed-precondition",
         "A URL da API ou o Token não estão configurados para o WhatsApp.",
