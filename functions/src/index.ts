@@ -2,6 +2,7 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
+import axios from "axios";
 
 // Inicializa o Firebase Admin SDK para que as funções possam atuar com
 // privilégios de administrador.
@@ -164,5 +165,111 @@ export const deleteUser = onCall(async (request) => {
   } catch (error) {
     logger.error(`Erro ao excluir usuário ${targetUid}:`, error);
     throw new HttpsError("internal", "Erro interno ao excluir o usuário.");
+  }
+});
+
+export const sendWhatsappMessage = onCall(async (request) => {
+  logger.info("Iniciando o envio de mensagem do WhatsApp via proxy...", {
+    structuredData: true,
+  });
+
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Você precisa estar autenticado.");
+  }
+
+  // Dados esperados do front-end, conforme o novo formato da API de destino
+  const {
+    number,
+    body: messageBody, // renomeado para evitar conflito com 'error.message'
+    userId = "",
+    queueId = "",
+    sendSignature = false,
+    closeTicket = false,
+  } = request.data;
+
+  if (!number || !messageBody) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Os campos 'number' e 'body' são obrigatórios.",
+    );
+  }
+
+  try {
+    // Busca as configurações de integração do WhatsApp no Firestore
+    const settingsDoc = await db.collection("settings").doc("whatsapp").get();
+
+    if (!settingsDoc.exists) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Configurações de integração do WhatsApp não encontradas no Firestore.",
+      );
+    }
+
+    const settings = settingsDoc.data();
+    const apiUrl = settings?.apiUrl;
+    const token = settings?.token;
+
+    if (!apiUrl || !token) {
+      throw new HttpsError(
+        "failed-precondition",
+        "A URL da API ou o Token não estão configurados para o WhatsApp.",
+      );
+    }
+
+    // Monta a requisição para a API externa
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+
+    const bodyPayload = {
+      number,
+      body: messageBody,
+      userId,
+      queueId,
+      sendSignature,
+      closeTicket,
+    };
+
+    logger.info("Enviando requisição para a API externa do WhatsApp...", {
+      apiUrl,
+      body: bodyPayload,
+    });
+
+    const apiResponse = await axios.post(apiUrl, bodyPayload, {headers});
+
+    logger.info("Resposta recebida da API do WhatsApp.", {
+      status: apiResponse.status,
+      data: apiResponse.data,
+    });
+
+    // Retorna os dados da resposta da API externa para o cliente
+    return apiResponse.data;
+  } catch (error) {
+    logger.error("Erro ao processar o envio da mensagem do WhatsApp:", error);
+
+    if (axios.isAxiosError(error)) {
+      logger.error("Erro específico do Axios:", {
+        message: error.message,
+        url: error.config?.url,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw new HttpsError(
+        "internal",
+        "Falha na comunicação com o serviço de WhatsApp.",
+        error.response?.data
+      );
+    }
+
+    // Para outros tipos de erro, incluindo HttpsError de pré-condições
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+    throw new HttpsError(
+      "internal",
+      "Ocorreu um erro interno ao enviar a mensagem.",
+    );
   }
 });
