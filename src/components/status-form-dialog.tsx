@@ -240,55 +240,63 @@ export function StatusFormDialog({
                         )}
                         />
 
-                        <div className="grid grid-cols-3 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="order"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Ordem</FormLabel>
-                                <FormControl>
-                                <Input type="number" placeholder="1" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
+                    <div className="grid grid-cols-4 gap-4">
+                      {/* Campo “Ordem” ocupa 1 coluna */}
+                      <FormField
+                        control={form.control}
+                        name="order"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ordem</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="1" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                        <FormField
-                            control={form.control}
-                            name="icon"
-                            render={({ field }) => (
-                              <FormItem className="w-48">       {/* 12 rem de largura fixa */}
-                                <FormLabel>Ícone</FormLabel>
-                                <FormControl className="w-full">
-                                  <IconPicker
-                                    className="w-full"
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                      {/* Campo “Ícone” ocupa 2 colunas */}
+                      <FormField
+                        control={form.control}
+                        name="icon"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Ícone</FormLabel>
+                            <FormControl>
+                              <IconPicker
+                                className="w-full"
+                                value={field.value}
+                                onChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                        <FormField
-                            control={form.control}
-                            name="color"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Cor</FormLabel>
-                                <FormControl>
-                                <div className="flex items-center gap-2">
-                                    <Input type="color" {...field} className="p-1 h-10 w-14" />
-                                </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        </div>
+                      {/* Campo “Cor” ocupa 1 coluna */}
+                      <FormField
+                        control={form.control}
+                        name="color"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cor</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="color"
+                                  {...field}
+                                  className="p-1 h-10 w-14"
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
 
                         <div className="space-y-2">
                         {([
