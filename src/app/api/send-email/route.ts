@@ -3,9 +3,9 @@ import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { ServiceOrder, Client, EmailSettings } from '@/lib/types';
 import { db } from '@/lib/firebaseAdmin';
 
-// Initialize MailerSend with your API token
+// Initialize MailerSend with your API token from environment variables
 const mailerSend = new MailerSend({
-  apiKey: 'mlsn.8b705c26458b033a96e26edeaca21b56308a7f5374b7a42e39d8cdf6de9402de',
+  apiKey: process.env.MAILERSEND_API_KEY || '',
 });
 
 async function sendEmailWithMailerSend(
@@ -35,16 +35,40 @@ async function sendEmailWithMailerSend(
   }
 }
 
-function generateDynamicEmailContent(order: ServiceOrder, clientName: string, emailBody: string): { subject: string, htmlContent: string } {
-    const subject = `Atualização da OS ${order.orderNumber} - Status: ${order.status.name}`;
+function generateDynamicEmailContent(
+    order: ServiceOrder, 
+    clientName: string, 
+    emailSubjectTpl: string | undefined, 
+    emailBodyTpl: string
+): { subject: string, htmlContent: string } {
     
-    // Replace placeholders
-    const personalizedBody = emailBody
-        .replace(/{client_name}/g, clientName)
-        .replace(/{os_number}/g, order.orderNumber)
-        .replace(/{status_name}/g, order.status.name)
-        .replace(/{technical_solution}/g, order.technicalSolution || 'Nenhuma solução técnica detalhada foi fornecida.')
-        .replace(/ /g, '<br>');
+    // Fallback subject if no template is provided in the status
+    const subjectTemplate = emailSubjectTpl || `Atualização da OS {{osNumber}} - Status: {{statusName}}`;
+    
+    // Define the replacements based on the variables shown in the frontend
+    const replacements: { [key: string]: string } = {
+        "{{clientName}}": clientName,
+        "{{osNumber}}": order.orderNumber,
+        "{{equipment}}": `${order.equipment.type} ${order.equipment.brand} ${order.equipment.model}`,
+        "{{statusName}}": order.status.name,
+        "{{entryDate}}": order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : 'N/A',
+        "{{pickupDate}}": order.status.isPickupStatus ? new Date().toLocaleDateString('pt-BR') : 'N/A', // Assumes email is sent on pickup day
+        "{{technicalSolution}}": order.technicalSolution || 'Nenhuma solução técnica detalhada foi fornecida.'
+    };
+
+    // Function to replace all placeholders in a given template string
+    const replacePlaceholders = (template: string): string => {
+        let result = template;
+        for (const [key, value] of Object.entries(replacements)) {
+            const regex = new RegExp(key.replace(/[-\/\^$*+?.()|[\]{}]/g, '\$&'), 'g');
+            result = result.replace(regex, value);
+        }
+        return result;
+    }
+
+    const personalizedSubject = replacePlaceholders(subjectTemplate);
+    const personalizedBody = replacePlaceholders(emailBodyTpl).replace(/
+/g, '<br>');
 
     const commonStyle = "font-family: Arial, sans-serif; line-height: 1.6; color: #333;";
     const headerStyle = "color: #0056b3;";
@@ -52,7 +76,7 @@ function generateDynamicEmailContent(order: ServiceOrder, clientName: string, em
 
     const htmlContent = `
         <div style="${commonStyle}">
-            <h2 style="${headerStyle}">Atualização da Ordem de Serviço ${order.orderNumber}</h2>
+            <h2 style="${headerStyle}">${personalizedSubject}</h2>
             <p>Prezado(a) ${clientName},</p>
             <div>${personalizedBody}</div>
             <p><strong>Resumo do Equipamento:</strong></p>
@@ -67,7 +91,7 @@ function generateDynamicEmailContent(order: ServiceOrder, clientName: string, em
             <p style="${footerStyle}">Este é um e-mail automático, por favor, não responda.</p>
         </div>`;
     
-    return { subject, htmlContent };
+    return { subject: personalizedSubject, htmlContent };
 }
 
 
@@ -76,7 +100,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const svcOrder = body.serviceOrder as ServiceOrder;
     const cli = body.client as Client;
-    const emailBody = body.emailBody as string | undefined;
+    
+    const emailSubjectTpl = svcOrder.status?.emailSubject;
+    const emailBodyTpl = svcOrder.status?.emailBody;
 
     if (!svcOrder?.id || !svcOrder.status?.name) {
       return NextResponse.json(
@@ -85,7 +111,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const orderId = svcOrder.id;
+    if (!emailBodyTpl) {
+        return NextResponse.json(
+            { error: "O template do corpo do e-mail não foi encontrado para este status. Verifique as configurações de notificação." },
+            { status: 400 }
+        );
+    }
+
     const recipientEmail = cli.email || svcOrder.collaborator.email;
     const recipientName  = cli.name  || svcOrder.collaborator.name;
 
@@ -107,18 +139,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhum e-mail de destinatário válido.' }, { status: 400 });
     }
 
-    let subject: string;
-    let htmlContent: string;
-
-    if (emailBody) {
-        const result = generateDynamicEmailContent(svcOrder, cli.name, emailBody);
-        subject = result.subject;
-        htmlContent = result.htmlContent;
-    } else {
-        // Fallback to a default content if no emailBody is provided
-        subject = `Atualização da OS ${svcOrder.orderNumber} - Status: ${svcOrder.status.name}`;
-        htmlContent = `<p>Prezado(a) ${cli.name},</p><p>Sua Ordem de Serviço <strong>${svcOrder.orderNumber}</strong> teve seu status atualizado para: <strong>${svcOrder.status.name.toUpperCase()}</strong>.</p><p>Atenciosamente,<br/>Equipe TSMIT</p>`;
-    }
+    const { subject, htmlContent } = generateDynamicEmailContent(svcOrder, recipientName, emailSubjectTpl, emailBodyTpl);
 
     await sendEmailWithMailerSend(recipientEmail, recipientName, subject, htmlContent, senderEmail);
 

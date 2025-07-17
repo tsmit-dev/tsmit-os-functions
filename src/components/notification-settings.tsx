@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,7 @@ import Link from "next/link";
 
 const notificationSettingsSchema = z.object({
   statusId: z.string().min(1, "Selecione um status."),
+  emailSubject: z.string().optional(),
   emailBody: z.string().optional(),
   whatsappBody: z.string().optional(),
 });
@@ -57,6 +59,7 @@ export function NotificationSettings() {
     resolver: zodResolver(notificationSettingsSchema),
     defaultValues: {
       statusId: "",
+      emailSubject: "",
       emailBody: "",
       whatsappBody: "",
     },
@@ -68,7 +71,10 @@ export function NotificationSettings() {
   useEffect(() => {
     async function fetchStatuses() {
       const allStatuses = await getStatuses();
-      setStatuses(allStatuses);
+      const notificationStatuses = allStatuses.filter(
+        (s) => s.triggersEmail || s.triggersWhatsapp
+      );
+      setStatuses(notificationStatuses);
     }
     fetchStatuses();
   }, []);
@@ -79,6 +85,7 @@ export function NotificationSettings() {
       setSelectedStatus(status);
       reset({
         statusId: status.id,
+        emailSubject: status.emailSubject || "",
         emailBody: status.emailBody || "",
         whatsappBody: status.whatsappBody || "",
       });
@@ -90,6 +97,7 @@ export function NotificationSettings() {
     try {
       await updateStatus(selectedStatus.id, {
         ...selectedStatus,
+        emailSubject: values.emailSubject,
         emailBody: values.emailBody,
         whatsappBody: values.whatsappBody,
       });
@@ -162,6 +170,28 @@ export function NotificationSettings() {
 
                             {selectedStatus && (
                                 <>
+                                <FormField
+                                    control={control}
+                                    name="emailSubject"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Assunto do E-mail</FormLabel>
+                                        <FormControl>
+                                        <Input
+                                            {...field}
+                                            placeholder="Insira o assunto do e-mail"
+                                            disabled={!selectedStatus.triggersEmail}
+                                        />
+                                        </FormControl>
+                                        {!selectedStatus.triggersEmail && (
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                Este status não está configurado para enviar e-mails.
+                                            </p>
+                                        )}
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
                                 <FormField
                                     control={control}
                                     name="emailBody"

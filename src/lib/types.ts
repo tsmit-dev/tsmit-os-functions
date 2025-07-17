@@ -69,6 +69,7 @@ color: string;
 icon?: string;
 isInitial?: boolean;
 triggersEmail?: boolean;
+emailSubject?: string;
 emailBody?: string;
 triggersWhatsapp?: boolean;
 whatsappBody?: string;
