@@ -254,6 +254,20 @@ export function StatusFormDialog({
                             </FormItem>
                             )}
                         />
+                        
+                        <FormField
+                            control={form.control}
+                            name="icon"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Ícone</FormLabel>
+                                <FormControl>
+                                <IconPicker value={field.value} onChange={field.onChange} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
 
                         <FormField
                             control={form.control}
@@ -265,20 +279,6 @@ export function StatusFormDialog({
                                 <div className="flex items-center gap-2">
                                     <Input type="color" {...field} className="p-1 h-10 w-14" />
                                 </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="icon"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Ícone</FormLabel>
-                                <FormControl>
-                                <IconPicker value={field.value} onChange={field.onChange} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
