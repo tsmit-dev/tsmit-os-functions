@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { EditOsDialog } from "@/components/edit-os-dialog";
 import { StatusBadge } from "@/components/status-badge";
+import { formatPhoneNumberForDisplay } from "@/lib/phone-utils";
 
 // Helper to translate field names for the edit history
 const getTranslatedFieldName = (field: string): string => {
@@ -297,7 +298,7 @@ export default function OsDetailPage() {
                             <div><p className="font-semibold text-muted-foreground">Empresa</p><p>{order.clientName}</p></div>
                             <div><p className="font-semibold text-muted-foreground">Contato</p><p>{order.collaborator.name}</p></div>
                             <div><p className="font-semibold text-muted-foreground">Email</p><p>{order.collaborator.email || 'N/A'}</p></div>
-                            <div><p className="font-semibold text-muted-foreground">Telefone</p><p>{order.collaborator.phone || 'N/A'}</p></div>
+                            <div><p className="font-semibold text-muted-foreground">Telefone</p><p>{formatPhoneNumberForDisplay(order.collaborator.phone)}</p></div>
                         </CardContent>
                     </Card>
                     <Card>

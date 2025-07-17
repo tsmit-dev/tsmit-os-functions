@@ -111,7 +111,7 @@ export function WhatsappSettingsForm() {
                     <Input type="password" placeholder="Seu token de autorização" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Seu token secreto para autenticar no webhook do n8n.
+                    Seu token secreto para autenticação do WhatsApp.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

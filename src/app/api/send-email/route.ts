@@ -36,20 +36,20 @@ async function sendEmailWithMailerSend(
 }
 
 function generateDynamicEmailContent(
-    order: ServiceOrder,
-    clientName: string,
-    emailSubjectTpl: string | undefined,
+    order: ServiceOrder, 
+    clientName: string, 
+    emailSubjectTpl: string | undefined, 
     emailBodyTpl: string
 ): { subject: string, htmlContent: string } {
-
+    
     // Fallback subject if no template is provided in the status
     const subjectTemplate = emailSubjectTpl || `Atualização da OS {{osNumber}} - Status: {{statusName}}`;
-
+    
     // Define the replacements based on the variables shown in the frontend
     const replacements: { [key: string]: string } = {
         "{{clientName}}": clientName,
         "{{osNumber}}": order.orderNumber,
-        "{{equipment}}": `${order.equipment.type} ${order.equipment.brand} ${order.equipment.model}`,
+        "{{equipment}}": `${order.equipment.brand} ${order.equipment.model}`,
         "{{statusName}}": order.status.name,
         "{{entryDate}}": order.createdAt ? new Date(order.createdAt).toLocaleDateString('pt-BR') : 'N/A',
         "{{pickupDate}}": order.status.isPickupStatus ? new Date().toLocaleDateString('pt-BR') : 'N/A', // Assumes email is sent on pickup day
@@ -67,8 +67,7 @@ function generateDynamicEmailContent(
     }
 
     const personalizedSubject = replacePlaceholders(subjectTemplate);
-    const personalizedBodyWithBreaks = replacePlaceholders(emailBodyTpl)
-  .replace(/\r?\n/g, '<br>');
+    const personalizedBody = replacePlaceholders(emailBodyTpl).replace(/\r?\n/g, '<br>');
 
     const commonStyle = "font-family: Arial, sans-serif; line-height: 1.6; color: #333;";
     const headerStyle = "color: #0056b3;";
@@ -78,11 +77,11 @@ function generateDynamicEmailContent(
         <div style="${commonStyle}">
             <h2 style="${headerStyle}">${personalizedSubject}</h2>
             <p>Prezado(a) ${clientName},</p>
-            <div>${personalizedBodyWithBreaks}</div>
+            <div>${personalizedBody}</div>
             <p><strong>Resumo do Equipamento:</strong></p>
             <ul>
                 <li><strong>Número da OS:</strong> ${order.orderNumber}</li>
-                <li><strong>Equipamento:</strong> ${order.equipment.type} - ${order.equipment.brand} ${order.equipment.model}</li>
+                <li><strong>Equipamento:</strong> ${order.equipment.brand} ${order.equipment.model}</li>
                 <li><strong>Problema Relatado:</strong> ${order.reportedProblem}</li>
             </ul>
             <p>Atenciosamente,</p>
@@ -90,7 +89,7 @@ function generateDynamicEmailContent(
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;"/>
             <p style="${footerStyle}">Este é um e-mail automático, por favor, não responda.</p>
         </div>`;
-
+    
     return { subject: personalizedSubject, htmlContent };
 }
 
@@ -100,7 +99,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const svcOrder = body.serviceOrder as ServiceOrder;
     const cli = body.client as Client;
-
+    
     const emailSubjectTpl = svcOrder.status?.emailSubject;
     const emailBodyTpl = svcOrder.status?.emailBody;
 
@@ -127,7 +126,7 @@ export async function POST(request: Request) {
     if (!settingsSnap.exists) {
       return NextResponse.json({ error: 'Configurações de e-mail não encontradas no Firestore.' }, { status: 500 });
     }
-
+    
     const emailSettings = settingsSnap.data() as EmailSettings;
     const senderEmail = emailSettings.senderEmail;
 

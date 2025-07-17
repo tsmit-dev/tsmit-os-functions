@@ -627,17 +627,12 @@ const sendWhatsappMessage = async (
   if (!client || !order.collaborator.phone) {
     return { success: false, errorMessage: 'Número de telefone ou cliente não encontrado.' };
   }
-  
-  const personalizedBody = whatsappBody
-      .replace(/{{clientName}}/g, client.name || 'N/A')
-      .replace(/{{osNumber}}/g, order.orderNumber)
-      .replace(/{{statusName}}/g, order.status.name)
-      .replace(/{{collaboratorName}}/g, order.collaborator.name || 'N/A');
 
   try {
     await sendWhatsappMessageCallable({
       number: order.collaborator.phone,
-      body: personalizedBody,
+      body: whatsappBody,
+      serviceOrder: order, // Pass the entire order
     });
     return { success: true };
   } catch (error: any) {

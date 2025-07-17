@@ -180,12 +180,13 @@ export const sendWhatsappMessage = onCall(async (request) => {
   const {
     number,
     body: messageBody,
+    serviceOrder,
   } = request.data;
 
-  if (!number || !messageBody) {
+  if (!number || !messageBody || !serviceOrder) {
     throw new HttpsError(
       "invalid-argument",
-      "Os campos 'number' e 'body' são obrigatórios.",
+      "Os campos 'number', 'body' e 'serviceOrder' são obrigatórios.",
     );
   }
 
@@ -213,17 +214,28 @@ export const sendWhatsappMessage = onCall(async (request) => {
       );
     }
 
-    const headers: {[key: string]: string} = {
+    const headers: { [key: string]: string } = {
       "Content-Type": "application/json",
     };
 
     if (n8nBearerToken) {
       headers["Authorization"] = `Bearer ${n8nBearerToken}`;
     }
+    
+    // Replace placeholders in the message body
+    const personalizedMessage = messageBody
+        .replace(/{{clientName}}/g, serviceOrder.clientName || 'N/A')
+        .replace(/{{osNumber}}/g, serviceOrder.orderNumber)
+        .replace(/{{equipment}}/g, `${serviceOrder.equipment.brand} ${serviceOrder.equipment.model}`)
+        .replace(/{{statusName}}/g, serviceOrder.status.name)
+        .replace(/{{entryDate}}/g, serviceOrder.createdAt ? new Date(serviceOrder.createdAt).toLocaleDateString('pt-BR') : 'N/A')
+        .replace(/{{pickupDate}}/g, serviceOrder.status.isPickupStatus ? new Date().toLocaleDateString('pt-BR') : 'N/A')
+        .replace(/{{technicalSolution}}/g, serviceOrder.technicalSolution || 'N/A');
+
 
     const bodyPayload = {
       number,
-      message: messageBody,
+      message: personalizedMessage,
     };
 
     logger.info("Enviando requisição para o webhook do n8n...", {
