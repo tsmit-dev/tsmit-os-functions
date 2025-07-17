@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageLayout } from '@/components/page-layout';
 import { usePermissions } from '@/context/PermissionsContext';
-import { Settings, Lock, Wrench, FileBadge, Mail, ChevronRight } from 'lucide-react';
+import { Settings, Lock, Wrench, FileBadge, Mail, ChevronRight, Bell } from 'lucide-react';
 import { useEffect } from 'react';
 import { Separator } from '@/components/ui/separator';
 
@@ -59,6 +59,13 @@ export default function AdminSettingsPage() {
             href: '/admin/settings/status',
             icon: <FileBadge className="w-full h-full text-primary" />,
             canAccess: hasPermission('adminSettings'), 
+        },
+        {
+            title: 'Notificações',
+            description: 'Gerencie os templates de e-mail e WhatsApp.',
+            href: '/admin/settings/notifications',
+            icon: <Bell className="w-full h-full text-primary" />,
+            canAccess: hasPermission('adminSettings'),
         },
         {
             title: 'Integrações',

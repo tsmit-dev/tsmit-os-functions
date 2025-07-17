@@ -14,7 +14,6 @@ import { Pencil, Plus } from 'lucide-react';
 import { IconPicker } from './icon-picker';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { TwitterPicker } from 'react-color';
-import { Textarea } from './ui/textarea';
 import { addStatus, updateStatus } from '@/lib/data';
 import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
@@ -28,9 +27,7 @@ const statusSchema = z.object({
     isInitial: z.boolean().default(false),
     isPickupStatus: z.boolean().default(false),
     triggersEmail: z.boolean().default(false),
-    emailBody: z.string().optional(),
     triggersWhatsapp: z.boolean().default(false),
-    whatsappBody: z.string().optional(),
 });
 
 type StatusFormValues = z.infer<typeof statusSchema>;
@@ -50,16 +47,13 @@ export function StatusFormSheet({ open, onOpenChange, status, onStatusChange, al
     resolver: zodResolver(statusSchema),
   });
   
-  const { watch, reset, control, handleSubmit } = form;
+  const { reset, control, handleSubmit } = form;
 
   useEffect(() => {
     if (open) {
       const defaultValues = status ? {
         ...status,
         order: status.order ?? 0,
-        emailBody: status.emailBody || '',
-        triggersWhatsapp: status.triggersWhatsapp || false,
-        whatsappBody: status.whatsappBody || '',
       } : {
         name: '',
         order: (allStatuses.length > 0 ? Math.max(...allStatuses.map(s => s.order)) + 1 : 1),
@@ -69,17 +63,11 @@ export function StatusFormSheet({ open, onOpenChange, status, onStatusChange, al
         isInitial: false,
         isPickupStatus: false,
         triggersEmail: false,
-        emailBody: '',
         triggersWhatsapp: false,
-        whatsappBody: '',
       };
       reset(defaultValues);
     }
   }, [open, status, allStatuses, reset]);
-
-
-  const triggersEmail = watch('triggersEmail');
-  const triggersWhatsapp = watch('triggersWhatsapp');
 
   const onSubmit = async (values: StatusFormValues) => {
     try {
@@ -151,24 +139,14 @@ export function StatusFormSheet({ open, onOpenChange, status, onStatusChange, al
 
                 <div className="space-y-4 rounded-lg border p-4">
                     <FormField control={control} name="triggersEmail" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Disparar Notificação por E-mail?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Notificar por E-mail?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
-                    {triggersEmail && (
-                        <FormField control={control} name="emailBody" render={({ field }) => (
-                            <FormItem><FormLabel>Corpo do Email</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="Ex: Olá {client_name}, a sua OS nº {os_number} mudou para: {status_name}." /></FormControl><FormMessage /></FormItem>
-                        )} />
-                    )}
                 </div>
 
                 <div className="space-y-4 rounded-lg border p-4">
                     <FormField control={control} name="triggersWhatsapp" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Disparar Notificação por WhatsApp?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Notificar por WhatsApp?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
-                    {triggersWhatsapp && (
-                        <FormField control={control} name="whatsappBody" render={({ field }) => (
-                            <FormItem><FormLabel>Corpo da Mensagem do WhatsApp</FormLabel><FormControl><Textarea {...field} rows={3} placeholder="Ex: Olá {client_name}, a OS {os_number} foi atualizada para: {status_name}." /></FormControl><FormMessage /></FormItem>
-                        )} />
-                    )}
                 </div>
 
 
