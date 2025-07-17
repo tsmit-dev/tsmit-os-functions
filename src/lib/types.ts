@@ -144,8 +144,8 @@ smtpPassword?: string;
 }
 
 export interface WhatsappSettings {
-  endpoint?: string;
-  bearerToken?: string;
+  n8nWebhookUrl?: string;
+  n8nBearerToken?: string;
 }
 
 export type UpdateServiceOrderResult = {

@@ -22,8 +22,8 @@ import { useToast } from '@/hooks/use-toast';
 import { WhatsappSettings } from '@/lib/types';
 
 const formSchema = z.object({
-  endpoint: z.string().url({ message: 'Por favor, insira uma URL válida.' }).optional().or(z.literal('')),
-  bearerToken: z.string().optional(),
+  n8nWebhookUrl: z.string().url({ message: 'Por favor, insira uma URL válida.' }).optional().or(z.literal('')),
+  n8nBearerToken: z.string().optional(),
 });
 
 type WhatsappFormValues = z.infer<typeof formSchema>;
@@ -34,8 +34,8 @@ export function WhatsappSettingsForm() {
   const form = useForm<WhatsappFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      endpoint: '',
-      bearerToken: '',
+      n8nWebhookUrl: '',
+      n8nBearerToken: '',
     },
   });
 
@@ -80,22 +80,22 @@ export function WhatsappSettingsForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Configurações do WhatsApp</CardTitle>
+        <CardTitle>Configurações do WhatsApp com n8n</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField
               control={form.control}
-              name="endpoint"
+              name="n8nWebhookUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Endpoint da API</FormLabel>
+                  <FormLabel>URL do Webhook n8n</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://api.tsmit.digital/api/messages/send" {...field} />
+                    <Input placeholder="https://seu-dominio-n8n.com/webhook/..." {...field} />
                   </FormControl>
                   <FormDescription>
-                    A URL de endpoint fornecida pela sua API do WhatsApp.
+                    A URL do webhook do seu fluxo de trabalho n8n que receberá os dados.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -103,15 +103,15 @@ export function WhatsappSettingsForm() {
             />
             <FormField
               control={form.control}
-              name="bearerToken"
+              name="n8nBearerToken"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Authorization Bearer Token</FormLabel>
+                  <FormLabel>Authorization Bearer Token (Opcional)</FormLabel>
                   <FormControl>
                     <Input type="password" placeholder="Seu token de autorização" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Seu token secreto para autenticar na API do WhatsApp.
+                    Seu token secreto para autenticar no webhook do n8n.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

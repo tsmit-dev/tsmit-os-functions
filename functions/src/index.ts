@@ -169,7 +169,7 @@ export const deleteUser = onCall(async (request) => {
 });
 
 export const sendWhatsappMessage = onCall(async (request) => {
-  logger.info("Iniciando o envio de mensagem do WhatsApp via proxy...", {
+  logger.info("Iniciando o envio de mensagem do WhatsApp via n8n...", {
     structuredData: true,
   });
 
@@ -177,14 +177,9 @@ export const sendWhatsappMessage = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Você precisa estar autenticado.");
   }
 
-  // Dados esperados do front-end, conforme o novo formato da API de destino
   const {
     number,
-    body: messageBody, // renomeado para evitar conflito com 'error.message'
-    userId = "",
-    queueId = "",
-    sendSignature = false,
-    closeTicket = false,
+    body: messageBody,
   } = request.data;
 
   if (!number || !messageBody) {
@@ -195,66 +190,57 @@ export const sendWhatsappMessage = onCall(async (request) => {
   }
 
   try {
-    // Busca as configurações de integração do WhatsApp no Firestore
     const settingsDoc = await db.collection("settings").doc("whatsapp").get();
 
     if (!settingsDoc.exists) {
       throw new HttpsError(
         "failed-precondition",
-        "Configurações de integração do WhatsApp não encontradas no Firestore.",
+        "Configurações de integração do n8n não encontradas no Firestore.",
       );
     }
 
     const settings = settingsDoc.data();
+    logger.info("Configurações do n8n recuperadas:", {settings});
 
-    // --- Added for debugging ---
-    logger.info("Configurações do WhatsApp recuperadas:", {settings});
+    const n8nWebhookUrl = settings?.n8nWebhookUrl;
+    const n8nBearerToken = settings?.n8nBearerToken;
 
-    const apiUrl = settings?.endpoint;
-    const token = settings?.bearerToken;
-
-    if (!apiUrl || !token) {
-      logger.error(
-        "A URL da API ou o Token não estão configurados corretamente.",
-        {settings},
-      );
+    if (!n8nWebhookUrl) {
+      logger.error("A URL do webhook n8n não está configurada.", {settings});
       throw new HttpsError(
         "failed-precondition",
-        "A URL da API ou o Token não estão configurados para o WhatsApp.",
+        "A URL do webhook n8n não está configurada.",
       );
     }
 
-    // Monta a requisição para a API externa
-    const headers = {
+    const headers: {[key: string]: string} = {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
     };
+
+    if (n8nBearerToken) {
+      headers["Authorization"] = `Bearer ${n8nBearerToken}`;
+    }
 
     const bodyPayload = {
       number,
-      body: messageBody,
-      userId,
-      queueId,
-      sendSignature,
-      closeTicket,
+      message: messageBody,
     };
 
-    logger.info("Enviando requisição para a API externa do WhatsApp...", {
-      apiUrl,
+    logger.info("Enviando requisição para o webhook do n8n...", {
+      url: n8nWebhookUrl,
       body: bodyPayload,
     });
 
-    const apiResponse = await axios.post(apiUrl, bodyPayload, {headers});
+    const apiResponse = await axios.post(n8nWebhookUrl, bodyPayload, {headers});
 
-    logger.info("Resposta recebida da API do WhatsApp.", {
+    logger.info("Resposta recebida do n8n.", {
       status: apiResponse.status,
       data: apiResponse.data,
     });
 
-    // Retorna os dados da resposta da API externa para o cliente
     return apiResponse.data;
   } catch (error) {
-    logger.error("Erro ao processar o envio da mensagem do WhatsApp:", error);
+    logger.error("Erro ao processar o envio da mensagem para o n8n:", error);
 
     if (isAxiosError(error)) {
       logger.error("Erro específico do Axios:", {
@@ -265,19 +251,18 @@ export const sendWhatsappMessage = onCall(async (request) => {
       });
       throw new HttpsError(
         "internal",
-        "Falha na comunicação com o serviço de WhatsApp.",
+        "Falha na comunicação com o webhook do n8n.",
         error.response?.data
       );
     }
 
-    // Para outros tipos de erro, incluindo HttpsError de pré-condições
     if (error instanceof HttpsError) {
       throw error;
     }
 
     throw new HttpsError(
       "internal",
-      "Ocorreu um erro interno ao enviar a mensagem.",
+      "Ocorreu um erro interno ao enviar a mensagem para o n8n.",
     );
   }
 });
