@@ -17,7 +17,8 @@ import {
     Gem,
     ListChecks,
     Mail,
-    Menu // Import the Menu icon
+    Bell, // Import the Bell icon
+    Menu
 } from 'lucide-react';
 
 import { useAuth } from './auth-provider';
@@ -49,6 +50,7 @@ const NavLinks = () => {
         { href: '/admin/settings', label: 'Geral', icon: Settings, permissionKey: 'adminSettings' },
         { href: '/admin/settings/roles', label: 'Cargos', icon: Gem, permissionKey: 'adminRoles' },
         { href: '/admin/settings/status', label: 'Status', icon: ListChecks, permissionKey: 'adminSettings' },
+        { href: '/admin/settings/notifications', label: 'Notificações', icon: Bell, permissionKey: 'adminSettings' },
         { href: '/admin/settings/services', label: 'Serviços', icon: ClipboardList, permissionKey: 'adminServices' },
         { href: '/admin/settings/integrations', label: 'Integrações', icon: Mail, permissionKey: 'adminSettings' },
     ];

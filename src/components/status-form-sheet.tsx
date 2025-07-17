@@ -137,15 +137,12 @@ export function StatusFormSheet({ open, onOpenChange, status, onStatusChange, al
                     )} />
                 </div>
 
-                <div className="space-y-4 rounded-lg border p-4">
+                <div className="grid grid-cols-2 gap-4">
                     <FormField control={control} name="triggersEmail" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Notificar por E-mail?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><FormLabel>Notificar por E-mail?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
-                </div>
-
-                <div className="space-y-4 rounded-lg border p-4">
                     <FormField control={control} name="triggersWhatsapp" render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between"><FormLabel>Notificar por WhatsApp?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4"><FormLabel>Notificar por WhatsApp?</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
                     )} />
                 </div>
 

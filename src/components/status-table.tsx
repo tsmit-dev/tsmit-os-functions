@@ -25,6 +25,7 @@ import { StatusFormDialog, StatusFormValues } from './status-form-dialog';
 import { updateDoc } from 'firebase/firestore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
+import { BooleanIndicator } from './boolean-indicator';
 
 interface StatusTableProps {
   statuses: Status[];
@@ -33,11 +34,10 @@ interface StatusTableProps {
 
 export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChange }) => {
     const isMobile = useIsMobile();
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [statusToDelete, setStatusToDelete] = useState<Status | null>(null);
     const { toast } = useToast();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
+    const [statusToDelete, setStatusToDelete] = useState<Status | null>(null);
 
     const openEdit = (status: Status) => {
         requestAnimationFrame(() => {
@@ -65,27 +65,21 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
         }
     };
 
-    const handleDeleteClick = (status: Status) => {
-        setStatusToDelete(status);
-        setIsDeleteDialogOpen(true);
-    };
-
     const confirmDelete = async () => {
         if (!statusToDelete) return;
         try {
-        await deleteDoc(doc(db, "statuses", statusToDelete.id));
-        toast({ title: "Sucesso!", description: "Status excluído com sucesso." });
-        onStatusChange();
+            await deleteDoc(doc(db, "statuses", statusToDelete.id));
+            toast({ title: "Sucesso!", description: "Status excluído com sucesso." });
+            onStatusChange();
         } catch (error) {
-        console.error("Error deleting status:", error);
-        toast({
-            title: "Erro",
-            description: "Ocorreu um erro ao excluir o status.",
-            variant: "destructive",
-        });
+            console.error("Error deleting status:", error);
+            toast({
+                title: "Erro",
+                description: "Ocorreu um erro ao excluir o status.",
+                variant: "destructive",
+            });
         } finally {
-        setIsDeleteDialogOpen(false);
-        setStatusToDelete(null);
+            setStatusToDelete(null);
         }
     };
 
@@ -124,18 +118,18 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                             {renderIcon(status.icon)}
                         </div>
                         </TableCell>
-                        <TableCell>{status.isPickupStatus ? "Sim" : "Não"}</TableCell>
-                        <TableCell>{status.isFinal ? "Sim" : "Não"}</TableCell>
-                        <TableCell>{status.isInitial ? "Sim" : "Não"}</TableCell>
-                        <TableCell>{status.triggersEmail ? "Sim" : "Não"}</TableCell>
-                        <TableCell>{status.triggersWhatsapp ? "Sim" : "Não"}</TableCell>
+                        <TableCell><BooleanIndicator value={status.isPickupStatus || false} /></TableCell>
+                        <TableCell><BooleanIndicator value={status.isFinal || false} /></TableCell>
+                        <TableCell><BooleanIndicator value={status.isInitial || false} /></TableCell>
+                        <TableCell><BooleanIndicator value={status.triggersEmail || false} /></TableCell>
+                        <TableCell><BooleanIndicator value={status.triggersWhatsapp || false} /></TableCell>
                         <TableCell className="text-right space-x-2">
                             <Button variant="ghost" size="icon" onClick={() => openEdit(status)}>
                                 <Pencil className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
+                            <AlertDialog onOpenChange={(open) => !open && setStatusToDelete(null)}>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(status)}>
+                                    <Button variant="ghost" size="icon" onClick={() => setStatusToDelete(status)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>
@@ -147,7 +141,7 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                         <AlertDialogAction onClick={confirmDelete}>Continuar</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -175,24 +169,24 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center">
-                           <span className={`mr-2 h-2 w-2 rounded-full ${status.isPickupStatus ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                        <div className="flex items-center gap-2">
+                           <BooleanIndicator value={status.isPickupStatus || false} />
                            <span>Pronto p/ Retirada</span>
                         </div>
-                        <div className="flex items-center">
-                           <span className={`mr-2 h-2 w-2 rounded-full ${status.isFinal ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                        <div className="flex items-center gap-2">
+                           <BooleanIndicator value={status.isFinal || false} />
                            <span>Status Final</span>
                         </div>
-                        <div className="flex items-center">
-                           <span className={`mr-2 h-2 w-2 rounded-full ${status.isInitial ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                        <div className="flex items-center gap-2">
+                           <BooleanIndicator value={status.isInitial || false} />
                            <span>Status Inicial</span>
                         </div>
-                        <div className="flex items-center">
-                           <span className={`mr-2 h-2 w-2 rounded-full ${status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                        <div className="flex items-center gap-2">
+                           <BooleanIndicator value={status.triggersEmail || false} />
                            <span>Dispara Email</span>
                         </div>
-                        <div className="flex items-center">
-                           <span className={`mr-2 h-2 w-2 rounded-full ${status.triggersWhatsapp ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                        <div className="flex items-center gap-2">
+                           <BooleanIndicator value={status.triggersWhatsapp || false} />
                            <span>Dispara WhatsApp</span>
                         </div>
                     </CardContent>
@@ -200,9 +194,9 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                         <Button variant="ghost" size="icon" onClick={() => openEdit(status)}>
                             <Pencil className="h-4 w-4" />
                         </Button>
-                        <AlertDialog>
+                        <AlertDialog onOpenChange={(open) => !open && setStatusToDelete(null)}>
                             <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(status)}>
+                                <Button variant="ghost" size="icon" onClick={() => setStatusToDelete(status)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </AlertDialogTrigger>
@@ -214,7 +208,7 @@ export const StatusTable: React.FC<StatusTableProps> = ({ statuses, onStatusChan
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                     <AlertDialogAction onClick={confirmDelete}>Continuar</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
