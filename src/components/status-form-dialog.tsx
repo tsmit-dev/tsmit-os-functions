@@ -254,20 +254,24 @@ export function StatusFormDialog({
                             </FormItem>
                             )}
                         />
-                        
+
                         <FormField
                             control={form.control}
                             name="icon"
                             render={({ field }) => (
-                            <FormItem>
+                              <FormItem className="w-48">       {/* 12 rem de largura fixa */}
                                 <FormLabel>Ícone</FormLabel>
-                                <FormControl>
-                                <IconPicker value={field.value} onChange={field.onChange} />
+                                <FormControl className="w-full">
+                                  <IconPicker
+                                    className="w-full"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                  />
                                 </FormControl>
                                 <FormMessage />
-                            </FormItem>
+                              </FormItem>
                             )}
-                        />
+                          />
 
                         <FormField
                             control={form.control}
