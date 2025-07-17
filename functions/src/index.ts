@@ -2,7 +2,7 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
-import axios from "axios";
+import axios, {isAxiosError} from "axios";
 
 // Inicializa o Firebase Admin SDK para que as funções possam atuar com
 // privilégios de administrador.
@@ -219,7 +219,7 @@ export const sendWhatsappMessage = onCall(async (request) => {
     // Monta a requisição para a API externa
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "Authorization": `Bearer ${token}`,
     };
 
     const bodyPayload = {
@@ -248,7 +248,7 @@ export const sendWhatsappMessage = onCall(async (request) => {
   } catch (error) {
     logger.error("Erro ao processar o envio da mensagem do WhatsApp:", error);
 
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       logger.error("Erro específico do Axios:", {
         message: error.message,
         url: error.config?.url,
