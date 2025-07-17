@@ -180,7 +180,7 @@ export const sendWhatsappMessage = onCall(async (request) => {
   const {
     number,
     body: messageBody,
-    serviceOrder,
+    serviceOrder, // Receive the full service order
   } = request.data;
 
   if (!number || !messageBody || !serviceOrder) {
@@ -214,23 +214,39 @@ export const sendWhatsappMessage = onCall(async (request) => {
       );
     }
 
-    const headers: { [key: string]: string } = {
+    const headers: {[key: string]: string} = {
       "Content-Type": "application/json",
     };
 
     if (n8nBearerToken) {
       headers["Authorization"] = `Bearer ${n8nBearerToken}`;
     }
-    
+
     // Replace placeholders in the message body
     const personalizedMessage = messageBody
-        .replace(/{{clientName}}/g, serviceOrder.clientName || 'N/A')
-        .replace(/{{osNumber}}/g, serviceOrder.orderNumber)
-        .replace(/{{equipment}}/g, `${serviceOrder.equipment.brand} ${serviceOrder.equipment.model}`)
-        .replace(/{{statusName}}/g, serviceOrder.status.name)
-        .replace(/{{entryDate}}/g, serviceOrder.createdAt ? new Date(serviceOrder.createdAt).toLocaleDateString('pt-BR') : 'N/A')
-        .replace(/{{pickupDate}}/g, serviceOrder.status.isPickupStatus ? new Date().toLocaleDateString('pt-BR') : 'N/A')
-        .replace(/{{technicalSolution}}/g, serviceOrder.technicalSolution || 'N/A');
+      .replace(/{{clientName}}/g, serviceOrder.clientName || "N/A")
+      .replace(/{{osNumber}}/g, serviceOrder.orderNumber)
+      .replace(
+        /{{equipment}}/g,
+        `${serviceOrder.equipment.brand} ${serviceOrder.equipment.model}`,
+      )
+      .replace(/{{statusName}}/g, serviceOrder.status.name)
+      .replace(
+        /{{entryDate}}/g,
+        serviceOrder.createdAt ?
+          new Date(serviceOrder.createdAt).toLocaleDateString("pt-BR") :
+          "N/A",
+      )
+      .replace(
+        /{{pickupDate}}/g,
+        serviceOrder.status.isPickupStatus ?
+          new Date().toLocaleDateString("pt-BR") :
+          "N/A",
+      )
+      .replace(
+        /{{technicalSolution}}/g,
+        serviceOrder.technicalSolution || "N/A",
+      );
 
 
     const bodyPayload = {
@@ -264,7 +280,7 @@ export const sendWhatsappMessage = onCall(async (request) => {
       throw new HttpsError(
         "internal",
         "Falha na comunicação com o webhook do n8n.",
-        error.response?.data
+        error.response?.data,
       );
     }
 
