@@ -42,10 +42,10 @@ export function WhatsappSettingsForm() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const docRef = doc(db, 'settings', 'integrations');
+        const docRef = doc(db, 'settings', 'whatsapp');
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().whatsapp) {
-          form.reset(docSnap.data().whatsapp);
+        if (docSnap.exists()) {
+          form.reset(docSnap.data());
         }
       } catch (error) {
         console.error("Erro ao buscar configurações do WhatsApp:", error);
@@ -61,9 +61,8 @@ export function WhatsappSettingsForm() {
 
   async function onSubmit(values: WhatsappFormValues) {
     try {
-      const docRef = doc(db, 'settings', 'integrations');
-      // Usamos set com merge: true para criar ou atualizar o documento sem sobrescrever outros campos.
-      await setDoc(docRef, { whatsapp: values }, { merge: true });
+      const docRef = doc(db, 'settings', 'whatsapp');
+      await setDoc(docRef, values);
       toast({
         title: 'Sucesso',
         description: 'Configurações do WhatsApp salvas com sucesso!',
